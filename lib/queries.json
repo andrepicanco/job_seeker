@@ -1,0 +1,14 @@
+{
+    "lever": "site:jobs.lever.co remote business latam after:",
+    "workable": "site:apply.workable.com remote business latam after:",
+    "ashby": "site:jobs.ashbyhq.com remote business latam after:",
+    "greenhouse": "site:boards.greenhouse.io remote business latam after:",
+    "jobvite": "site:jobs.jobvite.com remote business latam after:",
+    "teamtailor": "site:jobs.teamtailor.com remote business latam after:",
+    "workday": "site:myworkdayjobs.com remote business latam after:",
+    "applytojob": "site:applytojob.com remote business latam after:",
+    "jobsoid": "site:jobsoid.com remote business latam after:",
+    "linkedin": "site:linkedin.com/jobs/ (\"strategy & operations\" OR \"business\") remote latam after:",
+    "inhire": "inurl:inhire.app/ manager after:"
+  }
+  
