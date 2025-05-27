@@ -37,7 +37,9 @@ API_KEY = GOOGLE_API_KEY
 SEARCH_ENGINE_ID = SEARCH_ENGINE_ID
 QUERIES_PATH = os.path.join(os.path.dirname(__file__), '../lib/queries.json')
 OUTPUT_PATH = os.path.join(os.path.dirname(__file__), '../output/job_results.json')
+AI_SCREEN_OUTPUT_PATH = os.path.join(os.path.dirname(__file__), '../output/ai_screening.json')
 DAYS_LOOKBACK = 3  # How many days back to search
+MAX_RESULTS = 50
 
 # --- FUNCTIONS ---
 def load_queries(path):
@@ -49,17 +51,26 @@ def build_query(base_query, days_lookback):
     return f"{base_query}{date_str}"
 
 # Search Google for raw job postings
-def search_google(query, api_key, engine_id, num_results=10):
+def search_google(query, api_key, engine_id, num_results=10, start=1):
     url = "https://www.googleapis.com/customsearch/v1"
     params = {
         'key': api_key,
         'cx': engine_id,
         'q': query,
-        'num': num_results
+        'num': num_results,
+        'start': start
     }
+    
     response = requests.get(url, params=params)
+    j = json.loads(response.text)
+
     if response.status_code == 200:
-        return response.json().get('items', [])
+        print(f"Resultados: {int(j['searchInformation']['totalResults'])}") ## DESCOMENTAR
+        obj = {
+            'search_results': int(j['searchInformation']['totalResults']),
+            'items': [response.json().get('items', [])]
+        }
+        return obj
     else:
         print(f"Error: {response.status_code} for query: {query}")
         return []
@@ -70,6 +81,53 @@ def format_result(item):
     snippet = item.get('snippet', '')
     return f"Title: {title}\nURL: {link}\nSnippet: {snippet}\n---\n"
 
+# Group searches Google Search Engine (optimized way)
+def group_search(queries, max_results_per_query=30):
+
+    """
+        Optimize Google Engine searches, avoiding 429 error callbacks.
+    Args:
+        queries (dict): List of queries to be performed
+        max_results_per_query (int): Max items to be provided by google search, for a given query
+    Returns:
+        dict: List of potential job applications, structured in JSON format
+    """
+
+    current_queries = {}
+    group_results = []
+
+    # Transform JSON structure for ATS queries
+    for ats, base_query in queries.items():
+
+        current_queries[ats] = {
+            'name': build_query(base_query, DAYS_LOOKBACK),
+            'num_results': 1
+        }
+
+    # Performing queries to each item in list of queries
+    for name, query in current_queries.items():
+
+        # Google Search Query
+        results = search_google(query['name'], GOOGLE_API_KEY, SEARCH_ENGINE_ID, start=query['num_results'])
+
+        # Accessing query items, appending it to every result found.
+        try:
+            print(f"Consulta de {name}: {results['search_results']} resultados.")
+            for item in results['items'][0]:
+                formatted = format_result(item)
+                group_results.append(formatted)
+        except:
+            print(f'Deu um erro no item: {query}')
+            break
+
+        # Preparando para próximas iterações
+        if (results['search_results'] > 10) & (query['num_results'] <= max_results_per_query):
+            query['num_results'] += 10
+        else:
+            print(f"Acabaram consultas de: {name} ({query['num_results']} resultados)")
+            del current_queries[name]
+    
+    return group_results
 
 
 # Send to Dify agent: JOB SCREENER (1)
@@ -191,52 +249,69 @@ def main():
 
     # TEMPORARY SECTION: READ FROM FILE "JOB_RESULTS.TXT"
     OUTPUT_PATH = os.path.join(os.path.dirname(__file__), '../output/job_results.json')
-    all_results = []
+    ## TEMPORARY SECTION: USED TO AVOID GOOGLE SEARCHING DURING DEV
 
     """
     IMPROVEMENTS:
     1. Do pagination for Google Search
     """
-    # TEMPORARY COMMENTED OUT (16/05/2025) ###########
-    #
+
+    # (26/05/2025): Testing a group function
+    all_results = group_search(queries)
+
+    # I - TEMPORARY COMMENTED OUT (16/05/2025) ###########
+    # (26/05/2025): Section to be encapsulated into another function "group_search"
+    # all_results = []
     # for name, base_query in queries.items():
-    #     full_query = build_query(base_query, DAYS_LOOKBACK)
-    #     print(f"Searching for: {name} -> {full_query}")
-    #     results = search_google(full_query, API_KEY, SEARCH_ENGINE_ID)
-    #     for item in results:
-    #         formatted = format_result(item)
-    #         all_results.append(formatted)
-    #
-    # TEMPORARY COMMENTED OUT (16/05/2025) ###########
 
-    # os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
+    #     # Init for new searchesoiuj
+    #     n = 1
+
+    #     while n <= MAX_RESULTS:
+
+    #         full_query = build_query(base_query, DAYS_LOOKBACK)
+    #         print(f"Searching for: {name} -> {full_query}")
+    #         results = search_google(full_query, API_KEY, SEARCH_ENGINE_ID, start=n)
+
+    #         for item in results['items'][0]:
+    #             formatted = format_result(item)
+    #             all_results.append(formatted)
+
+    #     if results['search_results'] > 10:
+    #         n += 10
+    #     else:
+    #         n = MAX_RESULTS + 1
+
+    # #
+    # # I - TEMPORARY COMMENTED OUT (16/05/2025) ###########
+
+    os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
     # Comment out the old txt file creation
-    # with open(OUTPUT_PATH, 'w', encoding='utf-8') as f:
-    #     f.writelines(all_results)
-    # print(f"Results written to {OUTPUT_PATH}")
+    with open(OUTPUT_PATH, 'w', encoding='utf-8') as f:
+        f.writelines(all_results)
+    print(f"Results written to {OUTPUT_PATH}")
 
     # TEMPORARY COMMENTED OUT (16/05/2025) ###########
     #
-    ## New section: Write results as JSON
-    # json_output_path = os.path.join(os.path.dirname(__file__), '../output/job_results.json')
-    # json_results = []
-    # for result in all_results:
-    #     lines = result.strip().split('\n')
-    #     if len(lines) >= 3:
-    #         title = lines[0].replace('Title: ', '')
-    #         url = lines[1].replace('URL: ', '')
-    #         snippet = lines[2].replace('Snippet: ', '')
-    #         json_results.append({
-    #             "Title": title,
-    #             "URL": url,
-    #             "Snippet": snippet
-    #         })
-    # with open(json_output_path, 'w', encoding='utf-8') as f:
-    #     f.write(json.dumps(json_results, indent=2))
-    # print(f"Results written to {json_output_path}")
-    #
+    # New section: Write results as JSON
+    json_output_path = os.path.join(os.path.dirname(__file__), '../output/job_results.json')
+    json_results = []
+    for result in all_results:
+        lines = result.strip().split('\n')
+        if len(lines) >= 3:
+            title = lines[0].replace('Title: ', '')
+            url = lines[1].replace('URL: ', '')
+            snippet = lines[2].replace('Snippet: ', '')
+            json_results.append({
+                "Title": title,
+                "URL": url,
+                "Snippet": snippet
+            })
+    with open(json_output_path, 'w', encoding='utf-8') as f:
+        f.write(json.dumps(json_results, indent=2))
+    print(f"Results written to {json_output_path}")
+    
     # TEMPORARY COMMENTED OUT (16/05/2025) ###########
-
 
     """
     Filtering:
@@ -262,7 +337,14 @@ def main():
     """
         
     response = send_to_dify_agent(screening_prompt, DIFY_API_KEY, DIFY_USER, DIFY_AGENT_URL)
-    print(response)
+
+    # Write AI screening response to JSON file
+    os.makedirs(os.path.dirname(AI_SCREEN_OUTPUT_PATH), exist_ok=True)
+    with open(AI_SCREEN_OUTPUT_PATH, 'w', encoding='utf-8') as f:
+        json.dump(response, f, indent=2, ensure_ascii=False)
+    print(f"AI screening results written to {AI_SCREEN_OUTPUT_PATH}")
+
+    # print(response)
 
 if __name__ == "__main__":
     main() 
