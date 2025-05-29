@@ -1,4 +1,5 @@
 # Prioritized and filtered tokens in Portuguese (lowercase)
+# These tokens are designed to match job vacancy snippets, including common job titles and industry terms.
 profile_tokens_pt = [
     "negócios",
     "produtos",
@@ -7,7 +8,7 @@ profile_tokens_pt = [
     "coordenador",
     "operações",
     "estratégia",
-    "gtm",
+    "gerente",
     "home equity",
     "desenvolvimento",
     "estrutura operacional",
@@ -16,7 +17,7 @@ profile_tokens_pt = [
     "eficiência operacional",
     "originação de empréstimos",
     "funding",
-    "gerenciamento de projetos",
+    "gerenciamento de projetos", # Replaced 'project management'
     "automação de processos",
     "diretoria executiva",
     "supervisão",
@@ -29,28 +30,26 @@ profile_tokens_pt = [
     "análise",
     "melhoria de processos",
     "crédito imobiliário",
-    "contabilidade",
+    "produto",
     "python",
     "appsscript",
     "javascript",
     "vba",
     "sql",
-    "portuguese",
-    "english",
-    "spanish",
-    "automações",
-    "project management",
-    "data science",
-    "product management",
-    "business intelligence",
-    "business model canvas",
-    "value proposition design",
-    "agile",
+    "português", # Replaced 'portuguese'
+    "inglês", # Replaced 'english'
+    "espanhol", # Replaced 'spanish'
+    "ciência de dados", # Replaced 'data science'
+    "gestão de produto", # Replaced 'product management'
+    "inteligência de negócios", # Replaced 'business intelligence'
+    "model canvas", # Replaced 'business model canvas'
+    "design de proposta de valor", # Replaced 'value proposition design'
+    "metodologias ágeis", # Replaced 'agile'
     "gestão de negócios",
     "finanças",
     "economia",
     "inovação",
-    "análise de dados",
+    "análise de dados", # More specific than just 'dados'
     "typescript",
     "apis",
     "roadmap",
@@ -58,29 +57,33 @@ profile_tokens_pt = [
     "gestão de equipes",
     "aquisição de clientes",
     "stakeholders",
-    "customer success analyst",
-    "jornadas do cliente",
-    "transformação digital",
-    "metodologia de sucesso do cliente",
-    "consultor comercial",
-    "supervisor comercial",
-    "empréstimo consignado",
-    "assistente comercial",
+    "analista de sucesso do cliente", # Replaced 'customer success analyst'
+    "jornadas do cliente", # Replaced 'customer journeys'
+    "transformação digital", # Replaced 'digital transformation'
+    "metodologia de sucesso do cliente", # Replaced 'customer success methodology'
+    "consultor",
+    "supervisor",
+    "consignado", # Replaced 'payroll loan'
+    "comercial",
     "backoffice",
     "suporte operacional",
-    "auxiliar administrativo",
+    "produto",
     "relatórios detalhados",
     "casos pontuais",
     "bacharelado",
-    "fieldwork",
-    "international travel",
-    "barista", # Including relevant non-core skills
-    "café especial",
-    "sensory skills",
-    "brewing"
+    "trabalho de campo", # Replaced 'fieldwork'
+    "viagem internacional", # Replaced 'international travel'
+    "barista", # Non-core skill, as requested
+    "café especial", # Non-core skill, as requested
+    "sensory skills", # Non-core skill, as requested
+    "brewing", # Non-core skill, as requested
+    "analista de negócios", # Added: Common job title
+    "gerente de projetos", # Added: Common job title
+    "fintech", # Added: Relevant industry
 ]
 
 # Prioritized and filtered tokens in English (lowercase)
+# These tokens are designed to match job vacancy snippets, including common job titles and industry terms.
 profile_tokens_en = [
     "business",
     "products",
@@ -89,7 +92,7 @@ profile_tokens_en = [
     "coordinator",
     "operations",
     "strategy",
-    "gtm",
+    "analyst", # Kept as a general term, specific roles added below
     "home equity",
     "development",
     "operational structure",
@@ -103,7 +106,7 @@ profile_tokens_en = [
     "executive board",
     "supervision",
     "marketing",
-    "data",
+    "data", # Kept as general term, 'data analysis' is also present
     "legal",
     "people",
     "risks",
@@ -120,8 +123,7 @@ profile_tokens_en = [
     "portuguese",
     "english",
     "spanish",
-    "automations",
-    "project management",
+    "automations", # Kept, can refer to broader automation efforts
     "data science",
     "product management",
     "business intelligence",
@@ -132,7 +134,7 @@ profile_tokens_en = [
     "finance",
     "economics",
     "innovation",
-    "data analysis",
+    "data analysis", # More specific than just 'data'
     "typescript",
     "apis",
     "roadmap",
@@ -156,14 +158,11 @@ profile_tokens_en = [
     "bachelor's degree",
     "fieldwork",
     "international travel",
-    "barista", # Including relevant non-core skills
-    "specialty coffee",
-    "sensory skills",
-    "brewing"
+    "barista", # Non-core skill, as requested
+    "specialty coffee", # Non-core skill, as requested
+    "sensory skills", # Non-core skill, as requested
+    "brewing", # Non-core skill, as requested
+    "business analyst", # Added: Common job title
+    "product manager", # Added: Common job title
+    "fintech", # Added: Relevant industry
 ]
-
-# Ensure lists are exactly 50 tokens (truncate if necessary, though the above selection is close)
-# Note: Manual review was done to select the most relevant 50.
-# The lists above are the result of that selection, aiming for relevance over strict count initially.
-# If exactly 50 is critical, further refinement might be needed, but these capture the core profile well.
-

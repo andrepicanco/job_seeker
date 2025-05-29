@@ -101,31 +101,35 @@ def group_search(queries, max_results_per_query=30):
 
         current_queries[ats] = {
             'name': build_query(base_query, DAYS_LOOKBACK),
-            'num_results': 1
+            'num_results': 1,
+            'finished': False
         }
 
     # Performing queries to each item in list of queries
     for name, query in current_queries.items():
 
-        # Google Search Query
-        results = search_google(query['name'], GOOGLE_API_KEY, SEARCH_ENGINE_ID, start=query['num_results'])
+        while query['finished'] is not True:
 
-        # Accessing query items, appending it to every result found.
-        try:
-            print(f"Consulta de {name}: {results['search_results']} resultados.")
-            for item in results['items'][0]:
-                formatted = format_result(item)
-                group_results.append(formatted)
-        except:
-            print(f'Deu um erro no item: {query}')
-            break
+            # Google Search Query
+            results = search_google(query['name'], GOOGLE_API_KEY, SEARCH_ENGINE_ID, start=query['num_results'])
 
-        # Preparando para próximas iterações
-        if (results['search_results'] > 10) & (query['num_results'] <= max_results_per_query):
-            query['num_results'] += 10
-        else:
-            print(f"Acabaram consultas de: {name} ({query['num_results']} resultados)")
-            del current_queries[name]
+            # Accessing query items, appending it to every result found.
+            try:
+                print(f"Consulta de {name}: {results['search_results']} resultados.")
+                for item in results['items'][0]:
+                    formatted = format_result(item)
+                    group_results.append(formatted)
+            except:
+                print(f'Deu um erro no item: {query}')
+                break
+
+            # Preparando para próximas iterações
+            if (results['search_results'] > 10) & (query['num_results'] <= max_results_per_query):
+                query['num_results'] += 10
+            else:
+                query['num_results'] = results['search_results']
+                print(f"Acabaram consultas de: {name} ({query['num_results']} resultados)")
+                query['finished'] = True
     
     return group_results
 
@@ -196,22 +200,19 @@ def analyze_text_for_tokens(text, tokens_pt, tokens_en):
     
     return matches
 
-def filter_job_listings(save=False, min_tokens=1):
+def filter_job_listings(raw_job_listings, save=False, min_tokens=1):
     """
         Filter raw job listings based on token matches.
         Args:
+            raw_job_listings (dict): List of raw job listings saved in "output/job_results.json"
             save (bool): Whether to save the filtered job listings to a file.
             min_tokens (int): Minimum number of tokens to match.
         Returns:
             dict: Filtered job listings.
     """
 
-    # Load job listings
-    with open('output/job_results.json', 'r', encoding='utf-8') as f:
-        job_listings = json.load(f)
-
     # Process each listing
-    for listing in job_listings:
+    for listing in raw_job_listings:
         # Combine title and snippet for analysis
         text_to_check = f"{listing['Title']} {listing['Snippet']}"
         
@@ -229,111 +230,93 @@ def filter_job_listings(save=False, min_tokens=1):
         listing['remove'] = token_matches['total'] == 0
 
     # Print detailed results
-    # print(f"Total listings: {len(job_listings)}")
-    # print(f"Listings to remove: {sum(1 for listing in job_listings if listing['remove'])}")
-    # print(f"Listings to keep: {sum(1 for listing in job_listings if not listing['remove'])}")
+    # print(f"Total listings: {len(raw_job_listings)}")
+    # print(f"Listings to remove: {sum(1 for listing in raw_job_listings if listing['remove'])}")
+    # print(f"Listings to keep: {sum(1 for listing in raw_job_listings if not listing['remove'])}")
 
     # Filter job listings that has at least two token matches
-    job_listings = [job for job in job_listings if job['token_analysis']['total_matches'] > min_tokens]
+    filtered_job_listings = [job for job in raw_job_listings if job['token_analysis']['total_matches'] > min_tokens]
 
     # Save updated listings
     if save:
         with open('output/job_results_filtered.json', 'w', encoding='utf-8') as f:
-            json.dump(job_listings, f, indent=2, ensure_ascii=False)
+            json.dump(filtered_job_listings, f, indent=2, ensure_ascii=False)
 
-    return job_listings
+    return filtered_job_listings
 
 ### MAIN ###
 def main():
     queries = load_queries(QUERIES_PATH)
 
+
+
+    """
+    COMMENTED SECTION - 28/05
+    This section performs google searches. As in dev, undo commenting only if needed for production.
+    Instead, consider the 'OUTPUT_PATH' as the output of the section.
+    """
     # TEMPORARY SECTION: READ FROM FILE "JOB_RESULTS.TXT"
     OUTPUT_PATH = os.path.join(os.path.dirname(__file__), '../output/job_results.json')
+    
+    # Load job listings
+    with open('output/job_results.json', 'r', encoding='utf-8') as f:
+        job_listings = json.load(f)
     ## TEMPORARY SECTION: USED TO AVOID GOOGLE SEARCHING DURING DEV
 
+        # TEMPORARY COMMENTED OUT (16/05/2025) ###########
+
+        # (26/05/2025): Testing a group function
+        # all_results = group_search(queries) ## DESCOMENTAR P/ PERFORMAR NOVAS BUSCAS
+        # os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
+        #
+        # New section: Write results as JSON
+        # json_output_path = os.path.join(os.path.dirname(__file__), '../output/job_results.json')
+        # json_results = []
+        # for result in all_results:
+        #     lines = result.strip().split('\n')
+        #     if len(lines) >= 3:
+        #         title = lines[0].replace('Title: ', '')
+        #         url = lines[1].replace('URL: ', '')
+        #         snippet = lines[2].replace('Snippet: ', '')
+        #         json_results.append({
+        #             "Title": title,
+        #             "URL": url,
+        #             "Snippet": snippet
+        #         })
+        # with open(json_output_path, 'w', encoding='utf-8') as f:
+        #     f.write(json.dumps(json_results, indent=2))
+        # print(f"Results written to {json_output_path}")
+        
     """
-    IMPROVEMENTS:
-    1. Do pagination for Google Search
+    END OF COMMENTED SECTION - 28/05
     """
-
-    # (26/05/2025): Testing a group function
-    all_results = group_search(queries)
-
-    # I - TEMPORARY COMMENTED OUT (16/05/2025) ###########
-    # (26/05/2025): Section to be encapsulated into another function "group_search"
-    # all_results = []
-    # for name, base_query in queries.items():
-
-    #     # Init for new searchesoiuj
-    #     n = 1
-
-    #     while n <= MAX_RESULTS:
-
-    #         full_query = build_query(base_query, DAYS_LOOKBACK)
-    #         print(f"Searching for: {name} -> {full_query}")
-    #         results = search_google(full_query, API_KEY, SEARCH_ENGINE_ID, start=n)
-
-    #         for item in results['items'][0]:
-    #             formatted = format_result(item)
-    #             all_results.append(formatted)
-
-    #     if results['search_results'] > 10:
-    #         n += 10
-    #     else:
-    #         n = MAX_RESULTS + 1
-
-    # #
-    # # I - TEMPORARY COMMENTED OUT (16/05/2025) ###########
-
-    os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
-    # Comment out the old txt file creation
-    with open(OUTPUT_PATH, 'w', encoding='utf-8') as f:
-        f.writelines(all_results)
-    print(f"Results written to {OUTPUT_PATH}")
-
-    # TEMPORARY COMMENTED OUT (16/05/2025) ###########
-    #
-    # New section: Write results as JSON
-    json_output_path = os.path.join(os.path.dirname(__file__), '../output/job_results.json')
-    json_results = []
-    for result in all_results:
-        lines = result.strip().split('\n')
-        if len(lines) >= 3:
-            title = lines[0].replace('Title: ', '')
-            url = lines[1].replace('URL: ', '')
-            snippet = lines[2].replace('Snippet: ', '')
-            json_results.append({
-                "Title": title,
-                "URL": url,
-                "Snippet": snippet
-            })
-    with open(json_output_path, 'w', encoding='utf-8') as f:
-        f.write(json.dumps(json_results, indent=2))
-    print(f"Results written to {json_output_path}")
-    
-    # TEMPORARY COMMENTED OUT (16/05/2025) ###########
 
     """
     Filtering:
     1. Filtering by tokenized words from CV
     """
 
-    filtered_job_listings = filter_job_listings(save=False, min_tokens=1)
+    filtered_job_listings = filter_job_listings(job_listings, save=False, min_tokens=1)
 
-    # Format job listings into a readable string
+    # Format job listings into readable format for AIs
     formatted_listings = []
     for listing in filtered_job_listings:
+
         formatted_listings.append(
-            f"Title: {listing['Title']}\n"
-            f"URL: {listing['URL']}\n"
-            f"Snippet: {listing['Snippet']}\n"
+            f"Title: {listing['Title']} §"
+            f"URL: {listing['URL']} §"
+            f"Snippet: {listing['Snippet']} §"
             "---"
         )
 
+    # Saving filtered job listings to a file
+    with open('output/formmatted_job_listings.json', 'w', encoding='utf-8') as f:
+        json.dump(formatted_listings, f, indent=2, ensure_ascii=False)
+
     # Create screening prompt with formatted listings
-    screening_prompt = f"""
-    Please analyze these job listings and provide insights on their relevance and fit.
-    {chr(10).join(formatted_listings)}
+    screening_prompt = f"""Please analyze these job listings and provide insights on their relevance and fit.
+    ---
+    {chr(10).join(str(formatted_listings))}
     """
         
     response = send_to_dify_agent(screening_prompt, DIFY_API_KEY, DIFY_USER, DIFY_AGENT_URL)
