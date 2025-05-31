@@ -18,6 +18,9 @@ import sys
 from datetime import datetime, timedelta
 import mimetypes
 import time
+import re
+from sseclient import SSEClient
+from trello_integration import create_trello_cards_from_jobs
 
 # Add the project root directory to Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -28,6 +31,7 @@ from config import (
     GOOGLE_API_KEY,
     SEARCH_ENGINE_ID,
     DIFY_API_KEY,
+    DIFY_API_KEY_SEEKER,
     DIFY_AGENT_URL,
     DIFY_USER
 )
@@ -38,6 +42,7 @@ SEARCH_ENGINE_ID = SEARCH_ENGINE_ID
 QUERIES_PATH = os.path.join(os.path.dirname(__file__), '../lib/queries.json')
 OUTPUT_PATH = os.path.join(os.path.dirname(__file__), '../output/job_results.json')
 AI_SCREEN_OUTPUT_PATH = os.path.join(os.path.dirname(__file__), '../output/ai_screening.json')
+JOB_ANALYSIS_OUTPUT_PATH = os.path.join(os.path.dirname(__file__), '../output/job_analysis.json')
 DAYS_LOOKBACK = 3  # How many days back to search
 MAX_RESULTS = 50
 
@@ -133,22 +138,8 @@ def group_search(queries, max_results_per_query=30):
     
     return group_results
 
-
-# Send to Dify agent: JOB SCREENER (1)
-def send_to_dify_agent(text, api_key, user, agent_url):
-    
-    # Upload the file first
-    file_path = os.path.join(os.path.dirname(__file__), '../output/job_results.txt')
-    
-    #file_id = upload_file_to_dify(file_path, api_key, user)
-    # files_param = []
-    # if file_id:
-    #     files_param = [{
-    #         "type": "file",
-    #         "transfer_method": "local_file",
-    #         "upload_file_id": file_id
-    #     }]
-
+# Send messages to Dify Agents and Assistants
+def send_to_dify_agent(text, api_key, user, dify_url, response_mode='blocking'):
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
@@ -157,23 +148,114 @@ def send_to_dify_agent(text, api_key, user, agent_url):
     data = {
         "inputs": {},
         "query": text,
-        "response_mode": "blocking",
+        "response_mode": response_mode,
         "conversation_id": "",
         "user": user
-        # "files": files_param
     }
     time.sleep(1)
-    response = requests.post(agent_url, headers=headers, json=data)
-    if response.status_code == 200:
-        result = response.json()
-        print("Dify Agent Response:\n", result.get("answer", result))
-        return result.get("answer", result)
+
+    if response_mode == 'blocking':
+        response = requests.post(dify_url, headers=headers, json=data)
+        if response.status_code == 200:
+            result = response.json()
+            print("Dify Agent Response:\n", result.get("answer", result))
+            return result.get("answer", result)
+        else:
+            print(f"Error from Dify: {response.status_code}")
+            print(f'{json.loads(response.text)}')
+            return None
+    
+    # Streaming mode using sseclient-py
     else:
-        print(f"Error from Dify: {response.status_code}")
-        print(f'{json.loads(response.text)}')
-        return None
+        full_response_text = ""
+        try:
+            # Create a session with the headers
+            session = requests.Session()
+            session.headers.update(headers)
+            
+            # Make the initial POST request to get the SSE stream
+            response = session.post(dify_url, json=data, stream=True)
+            if response.status_code != 200:
+                print(f"Error from Dify: {response.status_code}")
+                print(f'{response.text}')
+                return None
 
+            # Create SSEClient with the response
+            messages = SSEClient(response)
+            
+            # Process SSE events by iterating over messages.events()
+            for msg in messages.events():
+                try:
+                    if msg.data:
+                        event_data = json.loads(msg.data)
+                        
+                        # Handle different event types
+                        if event_data.get('event') == 'agent_message':
+                            text_content = event_data.get('answer', '')
+                            full_response_text += text_content
+                        elif event_data.get('event') == 'error':
+                            error_msg = event_data.get('answer', 'Unknown error')
+                            print(f"Streaming error: {error_msg}")
+                            return None
+                        elif event_data.get('event') == 'workflow_finished':
+                            # End of stream
+                            break
+                            
+                except json.JSONDecodeError as e:
+                    print(f"Error decoding JSON event: {e}")
+                    continue
+                except Exception as e:
+                    print(f"Error processing event: {e}")
+                    continue
 
+            return full_response_text
+
+        except requests.exceptions.Timeout:
+            print("Request timed out")
+            return None
+        except requests.exceptions.RequestException as e:
+            print(f"Request failed: {e}")
+            return None
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+            return None
+
+## Parses JSON outputs from LLM
+"""
+Args:
+    json_from_llm_output (str): Text usually generated by LLMs for JSON structures
+Output:
+    Object
+"""
+def parse_llm_json(json_from_llm_output):
+
+    parsed_data = []
+
+    # Regex to find all blocks starting with ```json and ending with ```
+    # It captures the content between these markers.
+    # The 's' flag makes '.' match newlines as well.
+    json_blocks = re.findall(r"```json\s*(.*?)\s*```", json_from_llm_output, re.DOTALL)
+
+    for block in json_blocks:
+        # Clean the block: remove any trailing commas and strip whitespace
+        cleaned_block = block.strip()
+        if cleaned_block.endswith(','):
+            cleaned_block = cleaned_block[:-1] # Remove the trailing comma
+
+        try:
+            # Parse the cleaned JSON string
+            json_object = json.loads(cleaned_block)
+            parsed_data.append(json_object)
+        except json.JSONDecodeError as e:
+            print(f"Erro ao decodificar JSON: {e}")
+            print(f"Bloco problemático: \n---\n{cleaned_block}\n---")
+            # You might want to log this error or handle it differently
+
+    # Optionally, extract the summary text if it's always at the end after all JSON blocks
+    summary_match = re.search(r"```\s*(Resumo das vagas:.*?)\s*$", json_from_llm_output, re.DOTALL)
+    summary_text = summary_match.group(1).strip() if summary_match else None
+
+    return (parsed_data, summary_text)
 
 def analyze_text_for_tokens(text, tokens_pt, tokens_en):
     """
@@ -243,6 +325,54 @@ def filter_job_listings(raw_job_listings, save=False, min_tokens=1):
             json.dump(filtered_job_listings, f, indent=2, ensure_ascii=False)
 
     return filtered_job_listings
+
+def parse_ai_screening_results(json_content):
+    """
+    Parse the AI screening results from JSON format into a readable text format.
+    
+    Args:
+        json_content (str): The JSON content from ai_screening.json
+        
+    Returns:
+        str: Formatted text containing the job listings
+    """
+    try:
+        # If the content is already a string, try to parse it directly
+        if isinstance(json_content, str):
+            # Remove the ```json wrapper if present
+            if json_content.startswith('```json'):
+                json_content = json_content[7:]
+            if json_content.endswith('```'):
+                json_content = json_content[:-3]
+            
+            # Clean up escaped characters
+            json_content = json_content.replace('\\n', ' ').replace('\\xa0', ' ')
+            json_content = json_content.strip()
+            
+            # Parse the JSON content
+            job_listings = json.loads(json_content)
+        else:
+            # If it's already a parsed JSON object, use it directly
+            job_listings = json_content
+        
+        # Format each job listing
+        formatted_text = "AI Screening Results:\n\n"
+        for idx, job in enumerate(job_listings, 1):
+            formatted_text += f"Job #{idx}\n"
+            formatted_text += f"Title: {job['title']}\n"
+            formatted_text += f"Fit Score: {job['fit_score']}/100\n"
+            formatted_text += f"Description: {job['snippet']}\n"
+            formatted_text += f"Link: {job['link']}\n"
+            formatted_text += "-" * 80 + "\n\n"
+            
+        return formatted_text
+        
+    except json.JSONDecodeError as e:
+        print(f"Error parsing JSON content: {e}")
+        return None
+    except Exception as e:
+        print(f"Error processing content: {e}")
+        return None
 
 ### MAIN ###
 def main():
@@ -319,15 +449,47 @@ def main():
     {chr(10).join(str(formatted_listings))}
     """
         
-    response = send_to_dify_agent(screening_prompt, DIFY_API_KEY, DIFY_USER, DIFY_AGENT_URL)
-
+    # (30/05) - RESPONSE COMMENTED TO REDUCE API CONSUMPTION. UNCOMMENT WHEN IN PRD
+    # response = send_to_dify_agent(screening_prompt, DIFY_API_KEY, DIFY_USER, DIFY_AGENT_URL)
+    #
     # Write AI screening response to JSON file
-    os.makedirs(os.path.dirname(AI_SCREEN_OUTPUT_PATH), exist_ok=True)
-    with open(AI_SCREEN_OUTPUT_PATH, 'w', encoding='utf-8') as f:
-        json.dump(response, f, indent=2, ensure_ascii=False)
-    print(f"AI screening results written to {AI_SCREEN_OUTPUT_PATH}")
+    # os.makedirs(os.path.dirname(AI_SCREEN_OUTPUT_PATH), exist_ok=True)
+    # with open(AI_SCREEN_OUTPUT_PATH, 'w', encoding='utf-8') as f:
+    #     json.dump(response, f, indent=2, ensure_ascii=False)
+    # print(f"AI screening results written to {AI_SCREEN_OUTPUT_PATH}")
+    #
+    # Load job listings (30/05) - RUN THIS TO REDUCE API CONSUMPTION
+    # with open('output/ai_screening.json', 'r', encoding='utf-8') as f:
+    #     response = json.load(f)
+    #
+    # parsed_json = parse_ai_screening_results(response)
 
-    # print(response)
+    # # ## (30/05) - RESPONSE COMMENTED TO REDUCE API CONSUMPTION. UNCOMMENT WHEN IN PRD
+    # listings_analysis = send_to_dify_agent(parsed_json, DIFY_API_KEY_SEEKER, DIFY_USER, DIFY_AGENT_URL, response_mode='streaming')
+    #
+    # # Write AI screening response to JSON file
+    # os.makedirs(os.path.dirname(JOB_ANALYSIS_OUTPUT_PATH), exist_ok=True)
+    #    
+    # with open(JOB_ANALYSIS_OUTPUT_PATH, 'w', encoding='utf-8') as f:
+    #     json.dump(listings_analysis, f, indent=2, ensure_ascii=False)
+    # print(f"Job analysis written into {JOB_ANALYSIS_OUTPUT_PATH}")
+
+    # Load job analysis (30/05) - RUN THIS TO REDUCE API CONSUMPTION
+    with open('output/job_analysis.json', 'r', encoding='utf-8') as f:
+        response = json.load(f)
+
+    parsed_json = parse_llm_json(response)
+
+    recomendados = ['INVESTIGAR MAIS', 'CANDIDATAR-SE']
+    trello_cards = [job for job in parsed_json[0] if job['RECOMENDAÇÃO'] in recomendados]
+
+    # Create Trello cards for recommended jobs
+    if trello_cards:
+        print(f"\nCreating Trello cards for {len(trello_cards)} recommended jobs...")
+        created_cards = create_trello_cards_from_jobs(trello_cards)
+        print(f"Successfully created {len(created_cards)} Trello cards")
+    else:
+        print("\nNo jobs to create Trello cards for")
 
 if __name__ == "__main__":
     main() 
