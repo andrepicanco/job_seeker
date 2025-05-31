@@ -27,14 +27,12 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from lib.profile_tokens import profile_tokens_pt, profile_tokens_en
 from collections import Counter
-from config import (
-    GOOGLE_API_KEY,
-    SEARCH_ENGINE_ID,
-    DIFY_API_KEY,
-    DIFY_API_KEY_SEEKER,
-    DIFY_AGENT_URL,
-    DIFY_USER
-)
+GOOGLE_API_KEY = os.environ['GOOGLE_API_KEY']
+SEARCH_ENGINE_ID = os.environ['SEARCH_ENGINE_ID']
+DIFY_API_KEY = os.environ['DIFY_API_KEY']
+DIFY_API_KEY_SEEKER = os.environ['DIFY_API_KEY_SEEKER']
+DIFY_AGENT_URL = os.environ['DIFY_AGENT_URL']
+DIFY_USER = os.environ['DIFY_USER']
 
 # --- CONFIGURATION ---
 ###***********************************************************************************************************************###

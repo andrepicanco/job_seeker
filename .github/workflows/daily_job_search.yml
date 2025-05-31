@@ -1,6 +1,7 @@
 name: Daily Job Search
 
 on:
+  workflow_dispatch: # to enable manual runs
   schedule:
     # Runs every day at 22:00 UTC (which is 18:00 GMT-4)
     - cron: '0 22 * * *'

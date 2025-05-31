@@ -11,12 +11,13 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import os
 import requests
-from config import (
-    TRELLO_API_KEY,
-    TRELLO_TOKEN,
-    TRELLO_BOARD_ID,
-    TRELLO_LIST_ID
-)
+
+# Get environment variables directly
+TRELLO_API_KEY = os.environ['TRELLO_API_KEY']
+TRELLO_TOKEN = os.environ['TRELLO_TOKEN']
+TRELLO_BOARD_ID = os.environ['TRELLO_BOARD_ID']
+TRELLO_LIST_ID = os.environ['TRELLO_LIST_ID']
+
 
 def create_trello_card(job_data):
     """
