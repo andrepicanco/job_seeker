@@ -534,6 +534,8 @@ def main():
     with open(JOB_ANALYSIS_OUTPUT_PATH, 'w', encoding='utf-8') as f:
         json.dump(listings_analysis, f, indent=2, ensure_ascii=False)
 
+    parsed_json = parse_llm_json(listings_analysis)
+
     print(f"Job analysis written into {JOB_ANALYSIS_OUTPUT_PATH}")
 
     """********************************************
@@ -554,6 +556,21 @@ def main():
 
     except Exception as e:
         print(f'Failed to create trello cards: {e}')
+
+        try:
+            trello_cards = [job for job in parsed_json[0][0] if job['RECOMENDAÇÃO'] in recomendados]
+
+            # Create Trello cards for recommended jobs
+            if trello_cards:
+                print(f"\nCreating Trello cards for {len(trello_cards)} recommended jobs...")
+                created_cards = create_trello_cards_from_jobs(trello_cards)
+                print(f"Successfully created {len(created_cards)} Trello cards")
+            else:
+                print("\nNo jobs to create Trello cards for")
+
+        except Exception as e:
+            print(f'Failed to create trello cards (2nd try): {e}')
+            print(f'Job terminated, failure to create Trello cards.')
 
 if __name__ == "__main__":
     main() 
