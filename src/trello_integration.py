@@ -44,6 +44,10 @@ def create_trello_card(job_data):
         'urlSource': job_data['URL'],
         'pos': 'top'
     }
+
+    # Add a label for jobs that are recommended, according to AI Agent
+    if job_data['RECOMENDAÇÃO'] == 'CANDIDATAR-SE':
+        card_data['idLabels'] = '67eddecc96db48eddbbeb469' # it's a Green Label ID
     
     try:
         response = requests.post(url, json=card_data)

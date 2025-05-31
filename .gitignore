@@ -31,7 +31,11 @@ venv/
 env/
 ENV/
 
-# IDE specific files
+# Environment variables
+.env
+.env.*
+
+# IDE
 .idea/
 .vscode/
 *.swp
