@@ -284,10 +284,10 @@ def parse_llm_json(json_from_llm_output):
                 continue
 
     # Optionally, extract the summary text if it's always at the end after all JSON blocks
-    summary_match = re.search(r"```\s*(Resumo das vagas:.*?)\s*$", json_from_llm_output, re.DOTALL)
-    summary_text = summary_match.group(1).strip() if summary_match else None
+    # summary_match = re.search(r"```\s*(Resumo das vagas:.*?)\s*$", json_from_llm_output, re.DOTALL)
+    #summary_text = summary_match.group(1).strip() if summary_match else None
 
-    return (parsed_data, summary_text)
+    return parsed_data
 
 ###***********************************************************************************************************************###
 def analyze_text_for_tokens(text, tokens_pt, tokens_en):
@@ -543,8 +543,9 @@ def main():
     ********************************************"""
 
     recomendados = ['INVESTIGAR MAIS', 'CANDIDATAR-SE']
+
     try:
-        trello_cards = [job for job in parsed_json[0] if job['RECOMENDAÇÃO'] in recomendados]
+        trello_cards = [job for job in parsed_json if job['RECOMENDAÇÃO'] in recomendados]
 
         # Create Trello cards for recommended jobs
         if trello_cards:
@@ -556,21 +557,6 @@ def main():
 
     except Exception as e:
         print(f'Failed to create trello cards: {e}')
-
-        try:
-            trello_cards = [job for job in parsed_json[0][0] if job['RECOMENDAÇÃO'] in recomendados]
-
-            # Create Trello cards for recommended jobs
-            if trello_cards:
-                print(f"\nCreating Trello cards for {len(trello_cards)} recommended jobs...")
-                created_cards = create_trello_cards_from_jobs(trello_cards)
-                print(f"Successfully created {len(created_cards)} Trello cards")
-            else:
-                print("\nNo jobs to create Trello cards for")
-
-        except Exception as e:
-            print(f'Failed to create trello cards (2nd try): {e}')
-            print(f'Job terminated, failure to create Trello cards.')
 
 if __name__ == "__main__":
     main() 
