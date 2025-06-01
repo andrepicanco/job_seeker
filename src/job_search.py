@@ -412,9 +412,9 @@ def parse_ai_screening_results(json_content):
 ############################################# MAIN ###################################################
 def main():
 
-    """
-    NO API CALL SECTION (FOR DEV PURPOSES) - 31/05
-    """
+    # """
+    # NO API CALL SECTION (FOR DEV PURPOSES) - 31/05
+    # """
     # # TEMPORARY SECTION: READ FROM FILE "JOB_RESULTS.TXT"
     # OUTPUT_PATH = os.path.join(os.path.dirname(__file__), '../output/job_results.json')
     
@@ -444,7 +444,7 @@ def main():
     # # Create screening prompt with formatted listings
     # screening_prompt = f"""Please analyze these job listings and provide insights on their relevance and fit.
     # ---
-    # {chr(10).join(str(formatted_listings))}"""
+    # {chr(10).join(formatted_listings)}"""
 
     # ## Load job listings (30/05) - RUN THIS TO REDUCE API CONSUMPTION
     # with open('output/ai_screening.json', 'r', encoding='utf-8') as f:
@@ -511,7 +511,7 @@ def main():
     # Create screening prompt with formatted listings
     screening_prompt = f"""Please analyze these job listings and provide insights on their relevance and fit.
     ---
-    {chr(10).join(str(formatted_listings))}
+    {chr(10).join(formatted_listings)}
     """
 
     ## (30/05) - RESPONSE COMMENTED TO REDUCE API CONSUMPTION. UNCOMMENT WHEN IN PRD
