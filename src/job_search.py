@@ -545,7 +545,7 @@ def main():
     recomendados = ['INVESTIGAR MAIS', 'CANDIDATAR-SE']
 
     try:
-        trello_cards = [job for job in parsed_json if job['RECOMENDAÇÃO'] in recomendados]
+        trello_cards = [job for job in parsed_json if job[0]['RECOMENDAÇÃO'] in recomendados]
 
         # Create Trello cards for recommended jobs
         if trello_cards:
