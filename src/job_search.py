@@ -415,82 +415,15 @@ def main():
     """
     NO API CALL SECTION (FOR DEV PURPOSES) - 31/05
     """
-    # TEMPORARY SECTION: READ FROM FILE "JOB_RESULTS.TXT"
-    OUTPUT_PATH = os.path.join(os.path.dirname(__file__), '../output/job_results.json')
+    # # TEMPORARY SECTION: READ FROM FILE "JOB_RESULTS.TXT"
+    # OUTPUT_PATH = os.path.join(os.path.dirname(__file__), '../output/job_results.json')
     
-    # Load job listings
-    with open('output/job_results.json', 'r', encoding='utf-8') as f:
-        job_listings = json.load(f)
+    # # Load job listings
+    # with open('output/job_results.json', 'r', encoding='utf-8') as f:
+    #     job_listings = json.load(f)
 
-    #### Filtering:
-    #### 1. Filtering by tokenized words from CV
-    filtered_job_listings = filter_job_listings(job_listings, save=False, min_tokens=1)
-
-    # Format job listings into readable format for AIs
-    formatted_listings = []
-    for listing in filtered_job_listings:
-
-        formatted_listings.append(
-            f"Title: {listing['Title']} §"
-            f"URL: {listing['URL']} §"
-            f"Snippet: {listing['Snippet']} §"
-            "---"
-        )
-
-    # Saving filtered job listings to a file
-    with open('output/formmatted_job_listings.json', 'w', encoding='utf-8') as f:
-        json.dump(formatted_listings, f, indent=2, ensure_ascii=False)
-
-    # Create screening prompt with formatted listings
-    screening_prompt = f"""Please analyze these job listings and provide insights on their relevance and fit.
-    ---
-    {chr(10).join(str(formatted_listings))}"""
-
-    ## Load job listings (30/05) - RUN THIS TO REDUCE API CONSUMPTION
-    with open('output/ai_screening.json', 'r', encoding='utf-8') as f:
-        response = json.load(f)
-    
-    parsed_json = parse_ai_screening_results(response)
-
-    ### Load job analysis (30/05) - RUN THIS TO REDUCE API CONSUMPTION
-    with open('output/job_analysis.json', 'r', encoding='utf-8') as f:
-        response = json.load(f)
-
-    parsed_json = parse_llm_json(response)[0]
-    
-    """********************************************
-            PRODUCTION CODE SECTION - 31/05
-    ********************************************"""
-
-    # queries = load_queries(QUERIES_PATH)
-
-    # ## TEMPORARY SECTION: USED TO AVOID GOOGLE SEARCHING DURING DEV    
-    # ## (26/05/2025): Testing a group function
-    # all_results = group_search(queries) ## DESCOMENTAR P/ PERFORMAR NOVAS BUSCAS
-    # os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
-    
-    # ## New section: Write results as JSON
-    # json_output_path = os.path.join(os.path.dirname(__file__), '../output/job_results.json')
-    # job_listings = []
-    # for result in all_results:
-    #     lines = result.strip().split('\n')
-    #     if len(lines) >= 3:
-    #         title = lines[0].replace('Title: ', '')
-    #         url = lines[1].replace('URL: ', '')
-    #         snippet = lines[2].replace('Snippet: ', '')
-    #         job_listings.append({
-    #             "Title": title,
-    #             "URL": url,
-    #             "Snippet": snippet
-    #         })
-    
-    # ### For log purposes
-    # with open(json_output_path, 'w', encoding='utf-8') as f:
-    #     f.write(json.dumps(job_listings, indent=2))
-    # print(f"Search results written to {json_output_path}")
-
-    # ### Filtering:
-    # ### 1. Filtering by tokenized words from CV
+    # #### Filtering:
+    # #### 1. Filtering by tokenized words from CV
     # filtered_job_listings = filter_job_listings(job_listings, save=False, min_tokens=1)
 
     # # Format job listings into readable format for AIs
@@ -511,32 +444,99 @@ def main():
     # # Create screening prompt with formatted listings
     # screening_prompt = f"""Please analyze these job listings and provide insights on their relevance and fit.
     # ---
-    # {chr(10).join(str(formatted_listings))}
-    # """
+    # {chr(10).join(str(formatted_listings))}"""
 
-    # ## (30/05) - RESPONSE COMMENTED TO REDUCE API CONSUMPTION. UNCOMMENT WHEN IN PRD
-    # response = send_to_dify_agent(screening_prompt, DIFY_API_KEY, DIFY_USER, DIFY_AGENT_URL)
-
-    # ## Write AI screening response to JSON file
-    # os.makedirs(os.path.dirname(AI_SCREEN_OUTPUT_PATH), exist_ok=True)
-    # with open(AI_SCREEN_OUTPUT_PATH, 'w', encoding='utf-8') as f:
-    #     json.dump(response, f, indent=2, ensure_ascii=False)
-    # print(f"AI screening results written to {AI_SCREEN_OUTPUT_PATH}")
-
+    # ## Load job listings (30/05) - RUN THIS TO REDUCE API CONSUMPTION
+    # with open('output/ai_screening.json', 'r', encoding='utf-8') as f:
+    #     response = json.load(f)
+    
     # parsed_json = parse_ai_screening_results(response)
 
-    # ## (30/05) - RESPONSE COMMENTED TO REDUCE API CONSUMPTION. UNCOMMENT WHEN IN PRD
-    # listings_analysis = send_to_dify_agent(parsed_json, DIFY_API_KEY_SEEKER, DIFY_USER, DIFY_AGENT_URL, response_mode='streaming')
+    # ### Load job analysis (30/05) - RUN THIS TO REDUCE API CONSUMPTION
+    # with open('output/job_analysis.json', 'r', encoding='utf-8') as f:
+    #     response = json.load(f)
 
-    # ## Write AI screening response to JSON file
-    # os.makedirs(os.path.dirname(JOB_ANALYSIS_OUTPUT_PATH), exist_ok=True)
+    # parsed_json = parse_llm_json(response)[0]
+    
+    """********************************************
+            PRODUCTION CODE SECTION - 31/05
+    ********************************************"""
+
+    queries = load_queries(QUERIES_PATH)
+
+    ## TEMPORARY SECTION: USED TO AVOID GOOGLE SEARCHING DURING DEV    
+    ## (26/05/2025): Testing a group function
+    all_results = group_search(queries) ## DESCOMENTAR P/ PERFORMAR NOVAS BUSCAS
+    os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
+    
+    ## New section: Write results as JSON
+    json_output_path = os.path.join(os.path.dirname(__file__), '../output/job_results.json')
+    job_listings = []
+    for result in all_results:
+        lines = result.strip().split('\n')
+        if len(lines) >= 3:
+            title = lines[0].replace('Title: ', '')
+            url = lines[1].replace('URL: ', '')
+            snippet = lines[2].replace('Snippet: ', '')
+            job_listings.append({
+                "Title": title,
+                "URL": url,
+                "Snippet": snippet
+            })
+    
+    ### For log purposes
+    with open(json_output_path, 'w', encoding='utf-8') as f:
+        f.write(json.dumps(job_listings, indent=2))
+    print(f"Search results written to {json_output_path}")
+
+    ### Filtering:
+    ### 1. Filtering by tokenized words from CV
+    filtered_job_listings = filter_job_listings(job_listings, save=False, min_tokens=1)
+
+    # Format job listings into readable format for AIs
+    formatted_listings = []
+    for listing in filtered_job_listings:
+
+        formatted_listings.append(
+            f"Title: {listing['Title']} §"
+            f"URL: {listing['URL']} §"
+            f"Snippet: {listing['Snippet']} §"
+            "---"
+        )
+
+    # Saving filtered job listings to a file
+    with open('output/formmatted_job_listings.json', 'w', encoding='utf-8') as f:
+        json.dump(formatted_listings, f, indent=2, ensure_ascii=False)
+
+    # Create screening prompt with formatted listings
+    screening_prompt = f"""Please analyze these job listings and provide insights on their relevance and fit.
+    ---
+    {chr(10).join(str(formatted_listings))}
+    """
+
+    ## (30/05) - RESPONSE COMMENTED TO REDUCE API CONSUMPTION. UNCOMMENT WHEN IN PRD
+    response = send_to_dify_agent(screening_prompt, DIFY_API_KEY, DIFY_USER, DIFY_AGENT_URL)
+
+    ## Write AI screening response to JSON file
+    os.makedirs(os.path.dirname(AI_SCREEN_OUTPUT_PATH), exist_ok=True)
+    with open(AI_SCREEN_OUTPUT_PATH, 'w', encoding='utf-8') as f:
+        json.dump(response, f, indent=2, ensure_ascii=False)
+    print(f"AI screening results written to {AI_SCREEN_OUTPUT_PATH}")
+
+    parsed_json = parse_ai_screening_results(response)
+
+    ## (30/05) - RESPONSE COMMENTED TO REDUCE API CONSUMPTION. UNCOMMENT WHEN IN PRD
+    listings_analysis = send_to_dify_agent(parsed_json, DIFY_API_KEY_SEEKER, DIFY_USER, DIFY_AGENT_URL, response_mode='streaming')
+
+    ## Write AI screening response to JSON file
+    os.makedirs(os.path.dirname(JOB_ANALYSIS_OUTPUT_PATH), exist_ok=True)
        
-    # with open(JOB_ANALYSIS_OUTPUT_PATH, 'w', encoding='utf-8') as f:
-    #     json.dump(listings_analysis, f, indent=2, ensure_ascii=False)
+    with open(JOB_ANALYSIS_OUTPUT_PATH, 'w', encoding='utf-8') as f:
+        json.dump(listings_analysis, f, indent=2, ensure_ascii=False)
 
-    # parsed_json = parse_llm_json(listings_analysis)[0]
+    parsed_json = parse_llm_json(listings_analysis)[0]
 
-    # print(f"Job analysis written into {JOB_ANALYSIS_OUTPUT_PATH}")
+    print(f"Job analysis written into {JOB_ANALYSIS_OUTPUT_PATH}")
 
     """********************************************
           [END] PRODUCTION CODE SECTION - 31/05
